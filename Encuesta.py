@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 from datetime import datetime
 import uuid  # Para generar IDs únicos
-import openpyxl
+#import openpyxl
 from datetime import date
 
 
