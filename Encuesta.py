@@ -136,7 +136,7 @@ if "alcance" not in st.session_state:
 
 
 # Define los pasos para cada alcance
-pasos_completo = list(range(1, 35))  # o hasta el paso final que tengas
+pasos_completo = list(range(1, 40))  # o hasta el paso final que tengas
 pasos_basico = [9,10, 12, 13, 14, 15, 19, 20, 23, 24, 26, 27, 28, 32, 34]
 
 if 'historico' not in st.session_state:
@@ -154,6 +154,32 @@ if 'respuestas' not in st.session_state:
 def guardar_respuesta(key, value):
     st.session_state.respuestas[key] = value
 
+
+
+#---------------------------------------------------
+#                        DIMENSIONES
+# Mapear preguntas a sus dimensiones
+dimensiones = {
+    "D1.1": [f"pD11_{i}" for i in range(1, 5)] + ["D1_1", "obsD11"],
+    "D1.2": [f"pD12_{i}" for i in range(1, 5)] + ["D1_2", "obsD12"],
+    "D1.3": [f"pD13_{i}" for i in range(1, 5)] + ["D1_3", "obsD13"],
+    "D1.4": [f"pD14_{i}" for i in range(1, 5)] + ["D1_4", "obsD14"],
+    "D1.5": [f"pD15_{i}" for i in range(1, 5)] + ["D1_5", "obsD15"],
+    "D1.6": [f"pD16_{i}" for i in range(1, 5)] + ["D1_6", "obsD16"],
+    "D1.7": [f"pD17_{i}" for i in range(1, 5)] + ["D1_7", "obsD17"],
+    "D1.8": [f"pD18_{i}" for i in range(1, 5)] + ["D1_8", "obsD18"],
+    "D1.18": [f"pD28_{i}" for i in range(1, 5)] + ["D1_18", "obsD28"],
+
+    "D2.2": [f"pD2_2_{i}" for i in range(1, 5)] + ["D2_2", "obsD2_2"],
+    "D2.15": [f"pD2_15_{i}" for i in range(1, 5)] + ["D2_15", "obsD2_15"],
+    "D2.17": [f"pD2_17_{i}" for i in range(1, 5)] + ["D2_17", "obsD2_17"],
+}
+#---------------------------------------------------
+
+
+
+
+
 # ----------------------------
 # FUNCIONES DE NAVEGACIÓN
 # ----------------------------
@@ -161,12 +187,12 @@ def guardar_respuesta(key, value):
 
 def siguiente():
     actual = st.session_state.paso
+    alcance = st.session_state.get("alcance", "Completo")
 
     if actual < 8:
         st.session_state.paso += 1
 
     elif actual == 8:
-        alcance = st.session_state.get("alcance", "Seleccione")
         if alcance == "Seleccione":
             st.warning("Por favor seleccione el alcance antes de continuar.")
             return
@@ -174,27 +200,43 @@ def siguiente():
         st.session_state.paso = siguiente_paso
 
     else:
-        alcance = st.session_state.get("alcance", "Completo")
         pasos = pasos_basico if alcance == "Básico" else pasos_completo
         idx = pasos.index(actual)
         if idx < len(pasos) - 1:
-            st.session_state.paso = pasos[idx + 1]
+            siguiente_paso = pasos[idx + 1]
+
+            # Salto directo a la última si es básico y estamos en el último paso válido
+            if alcance == "Básico" and siguiente_paso == 35:
+                st.session_state.paso = 39
+            else:
+                st.session_state.paso = siguiente_paso
 
 
 def anterior():
     actual = st.session_state.paso
+    alcance = st.session_state.get("alcance", "Completo")
 
+    # Para los pasos 1 al 8, retrocede normalmente
     if actual <= 8:
         if actual > 1:
             st.session_state.paso -= 1
+        return
 
-    else:
-        alcance = st.session_state.get("alcance", "Completo")
-        pasos = pasos_basico if alcance == "Básico" else pasos_completo
-        if actual in pasos:
-            idx = pasos.index(actual)
-            if idx > 0:
-                st.session_state.paso = pasos[idx - 1]
+    # Para pasos después del 8
+    pasos = pasos_basico if alcance == "Básico" else pasos_completo
+
+    # Si estamos en el paso 39 y es básico, volvemos al último paso válido (ej. 34)
+    if actual == 39 and alcance == "Básico":
+        st.session_state.paso = pasos[-1]
+        return
+
+    if actual in pasos:
+        idx = pasos.index(actual)
+        if idx > 0:
+            st.session_state.paso = pasos[idx - 1]
+
+
+
 
 if "departamento" not in st.session_state:
     st.session_state.departamento = ""
@@ -280,7 +322,7 @@ if st.session_state.paso == 1:
                 <div style="
                 background-color: #0b3c70;
                 color: white;
-                padding: 2px 8px;
+                padding: 2px 6px;
                 border-radius: 3px;
                 font-size: 18px;
                 font-weight: bold;
@@ -296,7 +338,7 @@ if st.session_state.paso == 1:
                 <div style="
                 background-color: #e8f0fe;
                 color: black;
-                padding: 2px 8px;
+                padding: 2px 6px;
                 font-weight: bold;
                 border-radius: 0.5px;
                 ">
@@ -545,13 +587,7 @@ elif st.session_state.paso == 3:
                 "><b> 2. SERVICIOS DE REHABILITACIÓN HABILITADOS 
                 </div>
                 """, unsafe_allow_html=True)
-    with st.expander("🔍 Ver respuestas guardadas en esta sección"):
-        st.write("**Datos ingresados:**")
-        st.json({
-            "fecha": st.session_state.respuestas.get("fecha", ""),
-            "Departamento": st.session_state.respuestas.get("departamento", ""),
-            "Municipio": st.session_state.respuestas.get("municipio", "")
-        })
+
 
     servicio_2 = st.selectbox(
         "",
@@ -1293,18 +1329,19 @@ elif  st.session_state.paso == 6:#Bloque  recursos humanos 1
                 III. RECURSO HUMANO DE LOS SERVICIOS DE REHABILITACIÓN
                 </div>
                 """, unsafe_allow_html=True)    
-    
     st.markdown("""
                 <div style="
                 background-color: #e8f0fe ;
                 color: black;
-                padding: 2px 8px;
+                padding: 4px 10px;
                 font-weight: normal;
                 border-radius: 0.5px;
+                margin-bottom: -18px;
                 ">
-                Registre <b>número de profesionales de los servicios de rehabilitación</b> contratado por la institución en el momento de la verificación 
+                Registre <b>número de profesionales de los servicios de rehabilitación</b> contratado por la institución en el momento de la verificación. 
                 </div>
                 """, unsafe_allow_html=True)
+
     st.markdown("""
     <style>
     .stSelectbox div[data-baseweb="select"] {
@@ -1313,6 +1350,11 @@ elif  st.session_state.paso == 6:#Bloque  recursos humanos 1
     input[type="number"], input[type="text"] {
         height: 30px !important;
         font-size: 10px;
+    }
+    /* Reduce el margen superior e inferior del selectbox */
+    .stSelectbox {
+        margin-top: -9px !important;
+        margin-bottom: -9px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -1324,86 +1366,63 @@ elif  st.session_state.paso == 6:#Bloque  recursos humanos 1
         padding-bottom: 1rem;
     }
     .stTextInput, .stSelectbox, .stNumberInput, .stRadio {
-        margin-bottom: -10px;
+        margin-top: -9 !important;
+        margin-bottom: -9 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    col1,col2,col3,col4 = st.columns([1,1,1,1])
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+
+    def select_and_number_input(select_key, number_key):
+        st.markdown(
+            """
+            <style>
+            .stSelectbox, .stNumberInput {
+                margin-bottom: -10px !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        val = st.selectbox(
+            "",
+            options=[
+                "Seleccione",
+                "Fisioterapia",
+                "Fonoaudiología",
+                "Terapia ocupacional",
+                "Terapia Respiratoria",
+                "Esp. medicina Física y Fehabilitación",
+                "Psicología",
+                "Trabajo Social",
+                "Nutrición",
+            ],
+            key=select_key,
+        )
+        guardar_respuesta(select_key, val)
+        num = st.number_input(
+            "",
+            min_value=0,
+            max_value=100,
+            value=0,
+            step=1,
+            key=number_key,
+        )
+        guardar_respuesta(number_key, num)
 
     with col1:
-        DesP_1 = st.selectbox(
-            "",
-            options=["Seleccione", "Fisioterapia", "Fonoaudiología", "Terapia ocupacional", "Terapia Respiratoria","Esp. medicina Física y Fehabilitación", "Psicología", "Trabajo Social", "Nutrición"],
-            key="DesP_1"
-        )
-        guardar_respuesta("DesP_1", DesP_1)
-        numero_1 = st.number_input("", min_value=0, max_value=100, value=0, step=1,key="numero_1")
-        guardar_respuesta("numero_1", numero_1)
-
-        DesP_2 = st.selectbox(
-            "",
-            options=["Seleccione", "Fisioterapia", "Fonoaudiología", "Terapia ocupacional", "Terapia Respiratoria","Esp. medicina Física y Fehabilitación", "Psicología", "Trabajo Social", "Nutrición"],
-            key="DesP_2"
-        )
-        guardar_respuesta("DesP_2", DesP_2)
-        numero_2 = st.number_input("", min_value=0, max_value=100, value=0, step=1,key="numero_2")
-        guardar_respuesta("numero_2", numero_2)
-    
+        select_and_number_input("DesP_1", "numero_1")
+        select_and_number_input("DesP_2", "numero_2")
     with col2:
-        DesP_3 = st.selectbox(
-            "",
-            options=["Seleccione", "Fisioterapia", "Fonoaudiología", "Terapia ocupacional", "Terapia Respiratoria","Esp. medicina Física y Fehabilitación", "Psicología", "Trabajo Social", "Nutrición"],
-            key="DesP_3"
-        )
-        guardar_respuesta("DesP_3", DesP_3)
-        numero_3 = st.number_input("", min_value=0, max_value=100, value=0, step=1,key="numero_3")
-        guardar_respuesta("numero_3", numero_3)
-   
-        DesP_4 = st.selectbox(
-            "",
-            options=["Seleccione", "Fisioterapia", "Fonoaudiología", "Terapia ocupacional", "Terapia Respiratoria","Esp. medicina Física y Fehabilitación", "Psicología", "Trabajo Social", "Nutrición"],
-            key="DesP_4"
-        )
-        guardar_respuesta("DesP_4", DesP_4)
-        numero_4 = st.number_input("", min_value=0, max_value=100, value=0, step=1,key="numero_4")
-        guardar_respuesta("numero_4", numero_4)
+        select_and_number_input("DesP_3", "numero_3")
+        select_and_number_input("DesP_4", "numero_4")
     with col3:
-        DesP_5 = st.selectbox(
-            "",
-            options=["Seleccione", "Fisioterapia", "Fonoaudiología", "Terapia ocupacional", "Terapia Respiratoria","Esp. medicina Física y Fehabilitación", "Psicología", "Trabajo Social", "Nutrición"],
-            key="DesP_5"
-        )
-        guardar_respuesta("DesP_5", DesP_5)
-        numero_5 = st.number_input("", min_value=0, max_value=100, value=0, step=1,key="numero_5")
-        guardar_respuesta("numero_5", numero_5)
-    
-        DesP_6 = st.selectbox(
-            "",
-            options=["Seleccione", "Fisioterapia", "Fonoaudiología", "Terapia ocupacional", "Terapia Respiratoria","Esp. medicina Física y Fehabilitación", "Psicología", "Trabajo Social", "Nutrición"],
-            key="DesP_6"
-        )
-        guardar_respuesta("DesP_6", DesP_6)
-        numero_6 = st.number_input("", min_value=0, max_value=100, value=0, step=1,key="numero_6")
-        guardar_respuesta("numero_6", numero_6)
+        select_and_number_input("DesP_5", "numero_5")
+        select_and_number_input("DesP_6", "numero_6")
     with col4:
-        DesP_7 = st.selectbox(
-            "",
-            options=["Seleccione", "Fisioterapia", "Fonoaudiología", "Terapia ocupacional", "Terapia Respiratoria","Esp. medicina Física y Fehabilitación", "Psicología", "Trabajo Social", "Nutrición"],
-            key="DesP_7"
-        )
-        guardar_respuesta("DesP_7", DesP_7)
-        numero_7 = st.number_input("", min_value=0, max_value=100, value=0, step=1,key="numero_7")
-        guardar_respuesta("numero_7", numero_7)
-   
-        DesP_8 = st.selectbox(
-            "",
-            options=["Seleccione", "Fisioterapia", "Fonoaudiología", "Terapia ocupacional", "Terapia Respiratoria","Esp. medicina Física y Fehabilitación", "Psicología", "Trabajo Social", "Nutrición"],
-            key="DesP_8"
-        )
-        guardar_respuesta("DesP_8", DesP_8)
-        numero_8 = st.number_input("", min_value=0, max_value=100, value=0, step=1,key="numero_8")
-        guardar_respuesta("numero_8", numero_8)
+        select_and_number_input("DesP_7", "numero_7")
+        select_and_number_input("DesP_8", "numero_8")
 
     st.markdown("""
     <style>
@@ -1438,10 +1457,10 @@ elif  st.session_state.paso == 6:#Bloque  recursos humanos 1
                 """, unsafe_allow_html=True)
     
 
-    aclaraciones = st.text_area("Aclaraciones", height=80, key="aclaraciones")
+    aclaraciones = st.text_area("", height=80, key="aclaraciones")
     guardar_respuesta("aclaraciones", aclaraciones)
 
-    st.markdown("<hr class='linea'>", unsafe_allow_html=True)
+    #st.markdown("<hr class='linea'>", unsafe_allow_html=True)
 
     col1, col2= st.columns([5, 1])
     with col1:
@@ -1465,36 +1484,14 @@ elif st.session_state.paso == 7:
                 </div>
                 """, unsafe_allow_html=True)    
     
-    st.markdown("""
-    <style>
-    .stSelectbox div[data-baseweb="select"] {
-        min-height: 30px;
-    }
-    input[type="number"], input[type="text"] {
-        height: 30px !important;
-        font-size: 10px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <style>
-    .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-    .stTextInput, .stSelectbox, .stNumberInput, .stRadio {
-        margin-bottom: -10px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
     st.markdown("""
     <div style="
-        background-color: white;
-        border: 1px solid #ccc;
+        background-color: #e8f0fe;
+        border: 0px solid #ccc;
         padding: 0px 0px;
-        margin-bottom: 1px;
+        margin-bottom: 0px;
         font-weight: bold;
         font-size: 14px;
     ">
@@ -1503,22 +1500,33 @@ elif st.session_state.paso == 7:
     """, unsafe_allow_html=True)
 
 
+    # Aplica un estilo CSS para reducir el margen inferior de los inputs
+    st.markdown("""
+    <style>
+    .stTextInput {
+        margin-top: -10px !important;
+        margin-bottom: -7px !important;
+        padding-bottom: 0 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     for i in range(1, 7):
         rep = st.text_input(
-            label="",  # Oculta el texto de la variable
-            placeholder=f"{i}. Digite nombre completo [Cargo]",  # Aparece dentro del recuadro
+            label="",
+            placeholder=f"{i}. Digite nombre completo [Cargo]",
             key=f"rep_inst_{i}"
         )
         guardar_respuesta(f"rep_inst_{i}", rep)
 
-    st.markdown("<hr class='linea'>", unsafe_allow_html=True)
+    #st.markdown("<hr class='linea'>", unsafe_allow_html=True)
 
 
 # 🔹 Profesionales responsables de verificación
     st.markdown("""
     <div style="
-        background-color: white;
-        border: 1px solid #ccc;
+        background-color: #e8f0fe;
+        border: 0px solid #ccc;
         padding: 0px 0px;
         margin-bottom: 1px;
         font-weight: bold;
@@ -1548,20 +1556,20 @@ elif st.session_state.paso == 7:
 elif st.session_state.paso == 8: # Evaluación de la institución.
 
     st.markdown("""
-    <div style="background-color:#FFD966; padding: 2px 8px; font-weight:bold; border: 2px solid #b7b7b7; border-radius: 8px;">
+    <div style="background-color:#FFD966; padding: 2px 8px; font-weight:bold; border: 0px solid #b7b7b7;">
         <h0>IV. EVALUAR-BPS<h0/>
     </div>
 
-    <div style="background-color:#DEEAF6; padding: 6px 10px; font-style:italic; border: 2px solid #b7b7b7; border-radius: 8px;">
+    <div style="background-color:#DEEAF6; padding: 6px 10px; font-style:italic; border: 0px solid #b7b7b7;">
         <p style="margin: 0px;">Los siguientes ítems describen condiciones esenciales de la atención con enfoque biopsicosocial en los servicios de rehabilitación.</em></p>
         <p style="margin: 0px;">Para cada ítem los representantes de la institución deben concertar y seleccionar una respuesta entre las opciones que presenta la <strong>ESCALA DE VALORACIÓN</strong>.</em></p>
         <p style="margin: 0px;">Cada condición se acompaña de cuatro criterios de verificación para orientar la valoración.</em></p>
         <p style="margin: 0px;">Algunas condiciones serán verificadas en fuentes de información disponibles, previa autorización formal de la institución.</em></p>
     </div>
 
-    <div style="margin-top:10px; border: 2px solid #b7b7b7; border-radius: 8px; padding: 1 px 8px;">
+    <div style="border: 0.5px solid #b7b7b7; padding: 2 px 8px;">
         <strong>ESCALA DE VALORACIÓN</strong>
-        <ul style="list-style-type: none; padding-left: 0;">
+        <ul style="list-style-type: none; padding-left: 0;margin-left:8px;">
             <p style="margin: 0px;">5.</span> La condición cumple de forma óptima todos los criterios <span style="color:green; font-weight:bold;">▮</span></li>
             <p style="margin: 0px;">4.</span> La condición cumple de forma satisfactoria mínimo tres criterios</li>
             <p style="margin: 0px;">3.</span> La condición cumple de forma aceptable mínimo tres criterios</li>
@@ -1572,7 +1580,7 @@ elif st.session_state.paso == 8: # Evaluación de la institución.
     """, unsafe_allow_html=True)
 
     alcance = st.selectbox(
-        "Alcance de la evaluación",
+        "**Alcance de la evaluación**",
         options=["Seleccione", "Básico", "Completo"],
         key="alcance")
     guardar_respuesta("alcance", alcance)
@@ -1592,6 +1600,21 @@ elif st.session_state.paso == 9:
 # Paso 1 - D1.1
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    st.markdown("""
+                <div style="
                 background-color: #0b3c70;
                 color: white;
                 padding: 1px 3px;
@@ -1609,18 +1632,18 @@ elif st.session_state.paso == 9:
     preguntas_d11 = [
         "La institución presta servicio de psicología y/o trabajo social.",
         "La institución presta servicios de fisioterapia, fonoaudiología y/o terapia ocupacional.",
-        "Los servicios de rehabilitación disponibles corresponden con el nivel de complejidad.",
+        "Los servicios de rehabilitación disponibles corresponden con el nivel de complejidad.\*",
         "Los servicios de rehabilitación se organizan en un área específica de la institución.",
     ]
 
     notas_d11 = [
-    """Servicios de rehabilitación según nivel de atención del prestador:
-    
-    - **Nivel 3**: Servicios de nivel II. Los servicios de rehabilitación se organizan en un área (Ej., unidad, departamento).  
-    - **Nivel 2**: Medicina general y especialidades. Servicio de medicina física y rehabilitación (interconsulta), 
-                   fisioterapia, terapia ocupacional y/o fonoaudiología + psicología.  
-    - **Nivel 1**: Medicina general o remisión de prestador externo. Servicios de fisioterapia, fonoaudiología y/o 
-                   terapia ocupacional + psicología y/o trabajo social.
+    """Servicios de rehabilitación según nivel de atención del prestador\*:
+
+    Nivel 3. Servicios de nivel II. Los servicios de rehabilitación se organizan en un área [Ej., unidad, departamento]. 
+    Nivel 2. Medicina general y especialidades. Servicio de medicina física y rehabilitación [interconsulta], fisioterapia, 
+             terapia ocupacional y/o fonoaudiología + psicología. Otras terapias y especialidades.
+    Nivel 1. Medicina general o remisión de prestador externo. Servicios de fisioterapia, fonoaudiología y/o terapia ocupacional, 
+             + psicología y/o trabajo social
     """]
 
     if notas_d11[0]:
@@ -1632,6 +1655,7 @@ elif st.session_state.paso == 9:
         col1, col2= st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("------------------------------")
     
         with col2:
             val = st.selectbox("",opciones,format_func=lambda x: x[0],key=f"pD11_{i+1}")
@@ -1658,6 +1682,19 @@ elif st.session_state.paso == 9:
 #-------------------------------------------------------------------------------------
 # Paso 2 - D1.2
 elif st.session_state.paso == 10:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("""
                 <div style="
@@ -1693,6 +1730,7 @@ elif st.session_state.paso == 10:
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("------------------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD12_{i+1}")
             guardar_respuesta(f"pD12_{i+1}", val)
@@ -1716,6 +1754,19 @@ elif st.session_state.paso == 10:
 #-------------------------------------------------------------------------------------
 # Paso 3 - D1.3
 elif st.session_state.paso == 11:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("""
                 <div style="
@@ -1748,6 +1799,7 @@ elif st.session_state.paso == 11:
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("------------------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD13_{i+1}")
             guardar_respuesta(f"pD13_{i+1}", val)
@@ -1772,6 +1824,19 @@ elif st.session_state.paso == 11:
 #-------------------------------------------------------------------------------------
 # Paso 4 - D1.4
 elif st.session_state.paso == 12:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("""
                 <div style="
@@ -1808,6 +1873,7 @@ elif st.session_state.paso == 12:
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("------------------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD14_{i+1}")
             guardar_respuesta(f"pD14_{i+1}", val)
@@ -1830,6 +1896,20 @@ elif st.session_state.paso == 12:
 
 ################ Paso 5 - D1.5
 if st.session_state.paso == 13:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("""
                 <div style="
                 background-color: #0b3c70;
@@ -1863,6 +1943,7 @@ if st.session_state.paso == 13:
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("------------------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD15_{i+1}")
             guardar_respuesta(f"pD15_{i+1}", val)
@@ -1885,6 +1966,21 @@ if st.session_state.paso == 13:
 
 ################## Paso 6 - D1.6
 elif st.session_state.paso == 14:
+
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("""
                 <div style="
                 background-color:
@@ -1917,6 +2013,7 @@ elif st.session_state.paso == 14:
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("------------------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD16_{i+1}")
             guardar_respuesta(f"pD16_{i+1}", val)
@@ -1939,6 +2036,21 @@ elif st.session_state.paso == 14:
 
 ################## Paso 7 - D1.7
 elif st.session_state.paso == 15:
+
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("""
                 <div style="
                 background-color:
@@ -1962,10 +2074,10 @@ elif st.session_state.paso == 15:
         with st.expander("Nota"):
             st.markdown(notas_d17[0])
     preguntas_d17 = [
-        "**En los servicios de rehabilitación se encuentran disponibles los protocolos de atención.**",
-        "**La institución cuenta con una o más guías de práctica clínica (GPC) específicas para rehabilitación o GPC que integran recomendaciones para rehabilitación.**",
-        "**La institución cuenta con un procedimiento que establece la metodología para la elaboración de protocolos y GPC [metodologías: adopción, adaptación o creación].**",
-        "**Los protocolos y/o GPC de los servicios de rehabilitación se encuentran actualizados e implementados.**",
+        "En los servicios de rehabilitación se encuentran disponibles los protocolos de atención.",
+        "La institución cuenta con una o más guías de práctica clínica (GPC) específicas para rehabilitación o GPC que integran recomendaciones para rehabilitación.",
+        "La institución cuenta con un procedimiento que establece la metodología para la elaboración de protocolos y GPC [metodologías: adopción, adaptación o creación].",
+        "Los protocolos y/o GPC de los servicios de rehabilitación se encuentran actualizados e implementados.",
     ]
     for i, texto in enumerate(preguntas_d17):
         col1, col2 = st.columns([4, 1])
@@ -1994,6 +2106,20 @@ elif st.session_state.paso == 15:
 elif st.session_state.paso == 16:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2014,10 +2140,10 @@ elif st.session_state.paso == 16:
         with st.expander("Nota"):
             st.markdown(notas_d18[0])
     preguntas_d18 = [   
-        "**La inducción de nuevos profesionales incluye información sobre el proceso de atención con enfoque biopsicosocial.**",
-        "**La institución realiza capacitaciones periódicas sobre la atención con enfoque biopsicosocial.**",
-        "**Las capacitaciones sobre atención con enfoque biopsicosocial están dirigidas al personal asistencial y administrativo. [jefes, coordinadores, personal de mercadeo; RRHH]**",
-        "**Se implementan acciones para evaluar el conocimiento del personal sobre la atención con enfoque biopsicosocial.**",
+        "La inducción de nuevos profesionales incluye información sobre el proceso de atención con enfoque biopsicosocial.",
+        "La institución realiza capacitaciones periódicas sobre la atención con enfoque biopsicosocial.",
+        "Las capacitaciones sobre atención con enfoque biopsicosocial están dirigidas al personal asistencial y administrativo. [jefes, coordinadores, personal de mercadeo; RRHH].",
+        "Se implementan acciones para evaluar el conocimiento del personal sobre la atención con enfoque biopsicosocial.",
     ]
     for i, texto in enumerate(preguntas_d18):
         col1, col2 = st.columns([4, 1])
@@ -2046,6 +2172,19 @@ elif st.session_state.paso == 16:
 elif st.session_state.paso == 17:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D1. ORGANIZACIÓN Y GESTIÓN DE LOS SERVICIOS DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2057,17 +2196,19 @@ elif st.session_state.paso == 17:
                 D1.9 La institución cuenta con áreas de atención, dotación y tecnología para la implementación de intervenciones orientadas a optimizar el proceso de rehabilitación. 
                 </div>
                 """, unsafe_allow_html=True)
-    notas_d19 = [
-    """ 
+    notas_d19 = ["""Verificar:
+    
+                 Identificar facilitadores y barreras en la práctica [personal asistencial]. 
+                 Recorrido o video.
     """]
     if notas_d19[0]:
         with st.expander("Nota"):
             st.markdown(notas_d19[0])
     preguntas_d19 = [
-        "**Los servicios de rehabilitación cuentan con equipos e insumos adecuados a las necesidades de la población atendida y su condición de salud.**",
-        "**La institución realiza mantenimiento periódico y reparación oportuna de áreas, equipos e insumos de rehabilitación.**",
-        "**Los servicios de rehabilitación disponen de tecnología que favorecen el acceso, la eficiencia y/o personalización de la atención.**",
-        "**La institución cuenta con ambientes especializados para favorecer la autonomía, independencia y el desempeño de roles.**",
+        "Los servicios de rehabilitación cuentan con equipos e insumos adecuados a las necesidades de la población atendida y su condición de salud.",
+        "La institución realiza mantenimiento periódico y reparación oportuna de áreas, equipos e insumos de rehabilitación.",
+        "Los servicios de rehabilitación disponen de tecnología que favorecen el acceso, la eficiencia y/o personalización de la atención.",
+        "La institución cuenta con ambientes especializados para favorecer la autonomía, independencia y el desempeño de roles.",
     ]
     for i, texto in enumerate(preguntas_d19):
         col1, col2 = st.columns([4, 1])
@@ -2095,6 +2236,23 @@ elif st.session_state.paso == 17:
 
 #################### Paso 10 - D2.1
 elif st.session_state.paso == 18:
+
+
+
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("""
                 <div style="
                 background-color:
@@ -2145,6 +2303,21 @@ elif st.session_state.paso == 18:
 
 #################### Paso 11 - D2.2
 elif st.session_state.paso == 19:
+
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("""
                 <div style="
                 background-color:
@@ -2167,10 +2340,10 @@ elif st.session_state.paso == 19:
         with st.expander("Nota"):
             st.markdown(notas_d22[0])
     preguntas_d2_2 = [
-        "**Los profesionales de rehabilitación registran en la historia clínica el uso de pruebas y/o instrumentos de evaluación.**",
-        "**La institución define criterios para la selección y el uso de pruebas o instrumentos de evaluación de los usuarios de rehabilitación.**",
-        "**La institución cuenta con un método desarrollado o adaptado para la evaluación de los usuarios de rehabilitación.**",
-        "**Los profesionales hacen uso de  las pruebas o instrumentos disponibles según las caracteristicas y necesidades de los usuarios. [la disponibilidad hace referencia a fácil acceso durante la atención. Ej. en historia clínica]**",
+        "Los profesionales de rehabilitación registran en la historia clínica el uso de pruebas y/o instrumentos de evaluación.",
+        "La institución define criterios para la selección y el uso de pruebas o instrumentos de evaluación de los usuarios de rehabilitación.",
+        "La institución cuenta con un método desarrollado o adaptado para la evaluación de los usuarios de rehabilitación.",
+        "Los profesionales hacen uso de  las pruebas o instrumentos disponibles según las caracteristicas y necesidades de los usuarios. [la disponibilidad hace referencia a fácil acceso durante la atención. Ej. en historia clínica].",
     ]
     for i, texto in enumerate(preguntas_d2_2):
         col1, col2 = st.columns([4, 1])
@@ -2199,6 +2372,20 @@ elif st.session_state.paso == 19:
 elif st.session_state.paso == 20:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2220,15 +2407,16 @@ elif st.session_state.paso == 20:
         with st.expander("Nota"):
             st.markdown(notas_d23[0])
     preguntas_d2_3 = [
-        "**La valoración del estado funcional incluye diferentes dominios o áreas del funcionamiento de los usuarios.**",
-        "**La valoración del estado funcional se basa en parámetros medibles y los resultados se expresan en datos numéricos y/o categóricos.**",
-        "**La valoración del estado funcional concluye con el perfil de funcionamiento o el diagnóstico funcional del usuario.**",
-        "**La valoración del estado funcional involucra un equipo multidisciplinario\*\* que interviene en el proceso de rehabilitación.**",
+        "La valoración del estado funcional incluye diferentes dominios o áreas del funcionamiento de los usuarios.",
+        "La valoración del estado funcional se basa en parámetros medibles y los resultados se expresan en datos numéricos y/o categóricos.",
+        "La valoración del estado funcional concluye con el perfil de funcionamiento o el diagnóstico funcional del usuario.",
+        "La valoración del estado funcional involucra un equipo multidisciplinario\*\* que interviene en el proceso de rehabilitación.",
     ]
     for i, texto in enumerate(preguntas_d2_3):
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("-----------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_3_{i+1}")
             guardar_respuesta(f"pD2_3_{i+1}", val)
@@ -2251,6 +2439,19 @@ elif st.session_state.paso == 20:
 elif st.session_state.paso == 21:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2271,10 +2472,10 @@ elif st.session_state.paso == 21:
         with st.expander("Nota"):
             st.markdown(notas_d24[0])
     preguntas_d2_4 = [
-        "**En la evaluación se registra la ocupación o rol que desempeña el usuario en su entorno [Ej., hogar, trabajo, vida escolar].**",
-        "**Se identifican las dificultades que presenta el usuario para el desempeño de actividades en su entorno.**",
-        "**Se registran las expectativas del usuario y/o familia con relación a su ocupación o en el desempeño de actividades.**",
-        "**La evaluación del usuario incluye pruebas o instrumentos para valorar la realización de actividades en su entorno.**",
+        "En la evaluación se registra la ocupación o rol que desempeña el usuario en su entorno [Ej., hogar, trabajo, vida escolar].",
+        "Se identifican las dificultades que presenta el usuario para el desempeño de actividades en su entorno.",
+        "Se registran las expectativas del usuario y/o familia con relación a su ocupación o en el desempeño de actividades.",
+        "La evaluación del usuario incluye pruebas o instrumentos para valorar la realización de actividades en su entorno.",
     ]
     for i, texto in enumerate(preguntas_d2_4):
         col1, col2 = st.columns([4, 1])
@@ -2303,6 +2504,20 @@ elif st.session_state.paso == 21:
 elif st.session_state.paso == 22:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2315,6 +2530,7 @@ elif st.session_state.paso == 22:
                 </div>
                 """, unsafe_allow_html=True)
     notas_d25 = ["""Verificar:
+                 
                  Instrumento[s] de evaluación.
                  Historia clínica.
     """]
@@ -2334,10 +2550,10 @@ elif st.session_state.paso == 22:
                 """, unsafe_allow_html=True)
 
     preguntas_d2_5 = [
-        "**Acceso a servicios de salud según complejidad del diagnóstico o condición del usuario.**",
-        "**Ayudas técnicas: disponibilidad, entrenamiento y adaptación, adecuación al entorno.**",
-        "**Ajustes razonables en el entorno.**",
-        "**Redes de apoyo.**",
+        "Acceso a servicios de salud según complejidad del diagnóstico o condición del usuario.",
+        "Ayudas técnicas: disponibilidad, entrenamiento y adaptación, adecuación al entorno.",
+        "Ajustes razonables en el entorno.",
+        "Redes de apoyo.",
     ]
     for i, texto in enumerate(preguntas_d2_5):
         col1, col2 = st.columns([4, 1])
@@ -2366,6 +2582,20 @@ elif st.session_state.paso == 22:
 elif st.session_state.paso == 23:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2387,10 +2617,10 @@ elif st.session_state.paso == 23:
         with st.expander("Nota"):
             st.markdown(notas_d26[0])
     preguntas_d2_6 = [
-        "**La historia clínica incluye un ítem para el registro de las expectativas del usuario, la familia o cuidador.**",
-        "**Se registran las expectativas del usuario con relación al proceso de rehabilitación.**",
-        "**Se registran las expectativas de la familia o cuidador, especialmente en usuarios pediátricos, con compromiso cognitivo o dependencia severa.**",
-        "**Se implementan estrategias de acompañamiento a usuarios y/o familias con expectativas no realistas frente al proceso de rehabilitación.**",
+        "La historia clínica incluye un ítem para el registro de las expectativas del usuario, la familia o cuidador.",
+        "Se registran las expectativas del usuario con relación al proceso de rehabilitación.",
+        "Se registran las expectativas de la familia o cuidador, especialmente en usuarios pediátricos, con compromiso cognitivo o dependencia severa.",
+        "Se implementan estrategias de acompañamiento a usuarios y/o familias con expectativas no realistas frente al proceso de rehabilitación.",
     ]
     for i, texto in enumerate(preguntas_d2_6):
         col1, col2 = st.columns([4, 1])
@@ -2419,6 +2649,20 @@ elif st.session_state.paso == 23:
 elif st.session_state.paso == 24:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2439,10 +2683,10 @@ elif st.session_state.paso == 24:
         with st.expander("Nota"):
             st.markdown(notas_d27[0])
     preguntas_d2_7 = [
-        "**El plan de atención de los usuarios de rehabilitación hace parte de la historia clínica.**",
-        "**El plan de atención tiene una estructura predeterminada que incluye los objetivos o metas de rehabilitación.**",
-        "**En el plan de atención se describen las intervenciones a realizar por los profesionales o el equipo de rehabilitación.**",
-        "**El plan de atención es individualizado y se basa en la condición de salud, el estado funcional, las necesidades y expectativas del usuario.**",
+        "El plan de atención de los usuarios de rehabilitación hace parte de la historia clínica.",
+        "El plan de atención tiene una estructura predeterminada que incluye los objetivos o metas de rehabilitación.",
+        "En el plan de atención se describen las intervenciones a realizar por los profesionales o el equipo de rehabilitación.",
+        "El plan de atención es individualizado y se basa en la condición de salud, el estado funcional, las necesidades y expectativas del usuario.",
     ]
     for i, texto in enumerate(preguntas_d2_7):
         col1, col2 = st.columns([4, 1])
@@ -2471,6 +2715,20 @@ elif st.session_state.paso == 24:
 elif st.session_state.paso == 25:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2482,23 +2740,25 @@ elif st.session_state.paso == 25:
                 D2.8 El plan de atención integra el manejo médico de la condición de salud y las intervenciones para el logro de los objetivos y/o metas de rehabilitación. 
                 </div>
                 """, unsafe_allow_html=True)
-    notas_d28 = [
-    """ 
-    Nota o instrucciones para D2.8.
+    notas_d28 = ["""Verificar:
+    
+                 Historia clínica
+                 Plan de atención
     """]
     if notas_d28[0]:
         with st.expander("Nota"):
             st.markdown(notas_d28[0])
     preguntas_d2_8 = [
-        "Pregunta 1 de D2.8",
-        "Pregunta 2 de D2.8",
-        "Pregunta 3 de D2.8",
-        "Pregunta 4 de D2.8",
+        "Tratamiento médico: manejo farmacológico, procedimientos, ayudas técnicas, remisión a otros servicios [cuándo es necesario].",
+        "Intervención terapéutica: terapias, psicología y otros servicios, modalidades de atención, intensidad y duración.",
+        "Actividades de orientación y educación pertinentes para el usuario, la familia y/o cuidador.",
+        "Actividades de canalización del usuario a servicios y/o para la gestión de apoyos que contribuyan a su participación.",
     ]
     for i, texto in enumerate(preguntas_d2_8):
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("-----------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_8_{i+1}")
             guardar_respuesta(f"pD2_8_{i+1}", val)
@@ -2521,6 +2781,20 @@ elif st.session_state.paso == 25:
 elif st.session_state.paso == 26:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2529,26 +2803,29 @@ elif st.session_state.paso == 26:
                 font-size: 11px;
                 font-weight: bold;
                 ">
-                D2.9 Título de la condición D2.9
+                D2.9 Los profesionales definen con el usuario, la familia y/o cuidador, objetivos y/o metas de rehabilitación que se orientan a optimizar el funcionamiento. ►
                 </div>
                 """, unsafe_allow_html=True)
-    notas_d29 = [
-    """ 
-    Nota o instrucciones para D2.9.
+    notas_d29 = ["""Verificar:
+                 
+                 Historia clínica
+                 Plan de atención
+                 ** En prestadores de nivel 1: profesionales que intervienen en el proceso de rehabilitación.
     """]
     if notas_d29[0]:
         with st.expander("Nota"):
             st.markdown(notas_d29[0])
     preguntas_d2_9 = [
-        "Pregunta 1 de D2.9",
-        "Pregunta 2 de D2.9",
-        "Pregunta 3 de D2.9",
-        "Pregunta 4 de D2.9",
+        "Los profesionales registran en la historia clínica los objetivos o metas de rehabilitación.",
+        "Los objetivos y/o metas de rehabilitación están orientados a mejorar y/o potenciar la autonomía e independencia del usuario.",
+        "Los profesionales involucran al usuario, la familia y/o cuidador en la definición de objetivos y/o metas de rehabilitación.",
+        "Los objetivos y/o metas de rehabilitación se definen de manera concertada entre el equipo multidisciplinario,\*\* el usuario, la familia y/o cuidador.",
     ]
     for i, texto in enumerate(preguntas_d2_9):
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("-----------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_9_{i+1}")
             guardar_respuesta(f"pD2_9_{i+1}", val)
@@ -2571,6 +2848,20 @@ elif st.session_state.paso == 26:
 elif st.session_state.paso == 27:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2579,26 +2870,28 @@ elif st.session_state.paso == 27:
                 font-size: 11px;
                 font-weight: bold;
                 ">
-                D2.10 Título de la condición D2.10
+                D2.10 Se establecen objetivos y/o metas de rehabilitación medibles y alcanzables en un tiempo determinado. ►
                 </div>
                 """, unsafe_allow_html=True)
-    notas_d210 = [
-    """ 
-    Nota o instrucciones para D2.10.
+    notas_d210 = ["""Verificar:
+                  
+                  Historia clínica.
+                  Plan de atención.
     """]
     if notas_d210[0]:
         with st.expander("Nota"):
             st.markdown(notas_d210[0])
     preguntas_d2_10 = [
-        "Pregunta 1 de D2.10",
-        "Pregunta 2 de D2.10",
-        "Pregunta 3 de D2.10",
-        "Pregunta 4 de D2.10",
+        "Los objetivos y/o metas de rehabilitación se basan en actividades funcionales alcanzables y relevantes para el usuario y/o la familia.",
+        "Los objetivos y/o metas de rehabilitación son medibles y permiten determinar objetivamente los logros o resultados.",
+        "En los objetivos y/o metas de rehabilitación se define un plazo o tiempo para alcanzar los logros o resultados esperados.",
+        "Los objetivos y/o metas de rehabilitacion consideran la secuencialidad y progresión del proceso de rehabilitación.",
     ]
     for i, texto in enumerate(preguntas_d2_10):
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("-----------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_10_{i+1}")
             guardar_respuesta(f"pD2_10_{i+1}", val)
@@ -2621,6 +2914,20 @@ elif st.session_state.paso == 27:
 elif st.session_state.paso == 28:
     st.markdown("""
                 <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+                <div style="
                 background-color:
                 #0b3c70;
                 color: white;
@@ -2629,26 +2936,40 @@ elif st.session_state.paso == 28:
                 font-size: 11px;
                 font-weight: bold;
                 ">
-                D2.11 Título de la condición D2.11
+                D2.11 La intervención en rehabilitación del usuario se orienta a mejorar su autonomía e independencia.  ►
                 </div>
                 """, unsafe_allow_html=True)
-    notas_d211 = [
-    """ 
-    Nota o instrucciones para D2.11.
+    notas_d211 = ["""Verificar:
+                  
+                  Historia clínica
+                  ** En prestadores de nivel 1: profesionales que intervienen en el proceso de rehabilitación. 
     """]
     if notas_d211[0]:
         with st.expander("Nota"):
             st.markdown(notas_d211[0])
+
+    st.markdown("""
+                <div style="
+                background-color: #f5f5f5 ;
+                color: black;
+                padding: 4px 10px;
+                font-weight: normal;
+                border-radius: 0.5px;
+                "><b> En la historia clínica de los usuarios: 
+                </div>
+                """, unsafe_allow_html=True)
+    
     preguntas_d2_11 = [
-        "Pregunta 1 de D2.11",
-        "Pregunta 2 de D2.11",
-        "Pregunta 3 de D2.11",
-        "Pregunta 4 de D2.11",
+        "Se registran intervenciones de rehabilitación orientadas a mejorar la realización de actividades de la vida diaria y el desempeño del usuario en su entorno.",
+        "Las intervenciones de rehabilitación registradas son coherentes con los objetivos y/o metas de rehabilitación.",
+        "Se registra el uso de enfoques terapéuticos, intervenciones y/o técnicas con respaldo en la evidencia.",
+        "La intervención de los usuarios es realizada por el equipo multidisciplinario** e incorpora dispositivos de asistencia y tecnología.",
     ]
     for i, texto in enumerate(preguntas_d2_11):
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("-----------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_11_{i+1}")
             guardar_respuesta(f"pD2_11_{i+1}", val)
@@ -2667,38 +2988,54 @@ elif st.session_state.paso == 28:
     with col2:
         st.button("Siguiente ▶️", on_click=siguiente)
 
-#################### Paso 21 - D2.12
+        #################### Paso 21 - D2.12
 elif st.session_state.paso == 29:
     st.markdown("""
                 <div style="
-                background-color:
-                #0b3c70;
-                color: white;
-                padding: 1px 3px;
-                border-radius: 3px;
-                font-size: 11px;
-                font-weight: bold;
-                ">
-                D2.12 Título de la condición D2.12
-                </div>
-                """, unsafe_allow_html=True)
-    notas_d212 = [
-    """ 
-    Nota o instrucciones para D2.12.
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div style="
+            background-color:
+            #0b3c70;
+            color: white;
+            padding: 1px 3px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            ">
+            D2.12 Durante la intervención del usuario los profesionales de rehabilitación realizan acciones conjuntas, coordinadas e interdependientes.
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d212 = ["""Verificar:
+        
+        Historia clínica.
+        ** En prestadores de nivel 1: profesionales que intervienen en el proceso de rehabilitación. 
     """]
     if notas_d212[0]:
         with st.expander("Nota"):
             st.markdown(notas_d212[0])
     preguntas_d2_12 = [
-        "Pregunta 1 de D2.12",
-        "Pregunta 2 de D2.12",
-        "Pregunta 3 de D2.12",
-        "Pregunta 4 de D2.12",
+        "Dos o más profesionales de rehabilitación de la institución intervienen al usuario de manera independiente con objetivos comunes.",
+        "Los profesionales de rehabilitación realizan intervenciones disciplinares con objetivos comunes, y disponen de espacios para comunicarse y coordinar la atención.",
+        "Los profesionales de rehabilitación realizan intervenciones coordinadas y complementarias con objetivos comunes, y comparten el espacio de atención.",
+        "El equipo multidisciplinario\*\* dispone de espacios formales para la evaluación, seguimiento y toma de decisiones para la atención de  usuarios de mayor complejidad.",
     ]
     for i, texto in enumerate(preguntas_d2_12):
         col1, col2 = st.columns([4, 1])
         with col1:
             st.markdown(texto)
+            st.markdown("-----------------------")
         with col2:
             val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_12_{i+1}")
             guardar_respuesta(f"pD2_12_{i+1}", val)
@@ -2711,45 +3048,639 @@ elif st.session_state.paso == 29:
         with col2:
             obs = st.text_area("Observaciones", key="obsD2_12")
             guardar_respuesta("obsD2_12", obs)
-    col1, col2= st.columns([5, 1])
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+#################### Paso 22 - D2.13
+elif st.session_state.paso == 30:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D2.13 En el proceso de rehabilitación se implementan acciones con enfoque diferencial. 
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d213 = ["""Verificar:
+                  
+                  Recorrido o video; documentación técnica; registro de capacitaciones. 
+        """]
+    if notas_d213[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d213[0])
+    preguntas_d2_13 = [
+        "La institución dispone de ajustes razonables para facilitar el acceso y autonomía de los usuarios con discapacidad.",
+        "En la institución se cuenta con herramientas, dispositivos tecnológicos u otros mecanismos para facilitar la comunicación y participación en la toma de decisiones de los usuarios.",
+        "En la institución se realizan capacitaciones al personal para brindar atención diferencial a los usuarios según su edad, género, discapacidad, etnia, orientación sexual e identidad de género.",
+        "En la institución se implementan acciones diferenciadas para la atención de los usuarios según su edad, género, discapacidad, etnia, orientación sexual e identidad de género.",
+    ]
+    for i, texto in enumerate(preguntas_d2_13):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_13_{i+1}")
+            guardar_respuesta(f"pD2_13_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D2.13:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D2_13")
+            guardar_respuesta("D2_13", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD2_13")
+            guardar_respuesta("obsD2_13", obs)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+#################### Paso 23 - D2.14
+elif st.session_state.paso == 31:
+
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D2.14 Durante el proceso de atención, se realizan acciones para involucrar activamente al usuario, su familia y/o cuidador en el cumplimiento de los objetivos de rehabilitación.
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d214 = ["""Verificar:
+                  
+                  Historia clínica.
+                  Recursos audiovisuales y contenidos.
+                  Modalidades o estrategias de seguimiento o monitoreo.
+        """]
+    if notas_d214[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d214[0])
+    preguntas_d2_14 = [
+        "Durante la atención, los profesionales de rehabilitación brindan información al usuario y la familia sobre su rol en el proceso de rehabilitación.",
+        "Los profesionales de rehabilitación entregan al usuario, la familia y/o cuidador planes de ejercicios y/o actividades para realizar en casa o en otros entornos [colegio, trabajo].",
+        "En los servicios de rehabilitación se cuenta con recursos audiovisuales para informar y brindar contenido educativo a los usuarios, la familia y/o cuidador.",
+        "En los servicios de rehabilitación, los profesionales disponen y hacen uso de dispositivos tecnológicos para el seguimiento o monitoreo remoto de los usuarios.",
+    ]
+    for i, texto in enumerate(preguntas_d2_14):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_14_{i+1}")
+            guardar_respuesta(f"pD2_14_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D2.14:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D2_14")
+            guardar_respuesta("D2_14", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD2_14")
+            guardar_respuesta("obsD2_14", obs)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+#################### Paso 24 - D2.15
+elif st.session_state.paso == 32:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D2.15 En la etapa o fase de intervención se realiza reevaluación del usuario para identificar los logros y de ser necesario, realizar ajustes al plan de atención. ►
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d215 = ["""Verificar:
+    
+                  Historia clínica
+        """]
+    if notas_d215[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d215[0])
+    preguntas_d2_15 = [
+        "Los profesionales realizan **monitoreo** continuo de signos y/o síntomas relacionados con la condición del usuario.",
+        "Los profesionales registran cambios o logros en el estado funcional del paciente.",
+        "Los profesionales realizan seguimiento a los objetivos de rehabilitación y hacen ajustes a la intervención cuando es necesario.",
+        "La institución [o servicio] preestablece los tiempos de reevaluación de los usuarios haciendo uso de pruebas estandarizadas o instrumentos.",
+    ]
+    for i, texto in enumerate(preguntas_d2_15):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_15_{i+1}")
+            guardar_respuesta(f"pD2_15_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D2.15:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D2_15")
+            guardar_respuesta("D2_15", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD2_15")
+            guardar_respuesta("obsD2_15", obs)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+#################### Paso 25 - D2.16
+elif st.session_state.paso == 33:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D2.16 El proceso de rehabilitación incluye acciones planificadas de orientación y canalización del usuario y su familia a otras instituciones o sectores que pueden contribuir a su participación.
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d216 = ["""Verificar:
+                  
+                  -Historia clínica
+                  -Documentación técnica.
+        """]
+    if notas_d216[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d216[0])
+    preguntas_d2_16 = [
+        "Los profesionales de rehabilitación orientan al usuario, la familia y/o cuidador sobre servicios o programas disponibles que contribuyen a la participación.",
+        "Los profesionales derivan al usuario, la familia y/o cuidador a servicios o programas específicos para promover la participación del usuario. ",
+        "Los servicios de rehabilitación cuentan con estrategias para la canalización del usuario y su familia a instituciones o servicios que contribuyen a la participación. ",
+        "Los servicios de rehabilitación realizan trabajo en red con otras instituciones y servicios para incrementar las oportunidades de participación de los usuarios.",
+    ]
+    for i, texto in enumerate(preguntas_d2_16):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_16_{i+1}")
+            guardar_respuesta(f"pD2_16_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D2.16:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D2_16")
+            guardar_respuesta("D2_16", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD2_16")
+            guardar_respuesta("obsD2_16", obs)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+#################### Paso 26 - D2.17
+elif st.session_state.paso == 34:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D2.17 Se realiza evaluación final del usuario para determinar los logros, y definir el egreso o la pertinencia de continuar con el proceso de rehabilitación.►
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d217 = ["""Verificar:
+                  
+                  Historia clínica
+        """]
+    if notas_d217[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d217[0])
+    preguntas_d2_17 = [
+        "El proceso de rehabilitación de los usuarios termina con la evaluación final.",
+        "Se identifican los logros o resultados según los objetivos y/o metas de rehabilitación.",
+        "Con los resultados de la evaluación final, se define el egreso del usuario o la continuidad del proceso de rehabilitación.",
+        "Se entregan indicaciones y recomendaciones al usuario como estrategias de mantenimiento, control médico y/o participación.",
+    ]
+    for i, texto in enumerate(preguntas_d2_17):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_17_{i+1}")
+            guardar_respuesta(f"pD2_17_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D2.17:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D2_17")
+            guardar_respuesta("D2_17", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD2_17")
+            guardar_respuesta("obsD2_17", obs)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+#################### Paso 27 - D2.18
+elif st.session_state.paso == 35:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D2. PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D2.18 Se implementan acciones específicas para la atención y el egreso de usuarios de rehabilitación de larga permanencia con pobre pronostico funcional.
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d218 = ["""Verificar:
+    
+                    Documentación técnica.
+        """]
+    if notas_d218[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d218[0])
+    preguntas_d2_18 = [
+        "En los servicios de rehabilitación se identifican los usuarios de larga permanencia.",
+        "La institución cuenta con criterios definidos para la admisión y reingreso de los usuarios de larga permanencia.",
+        "En los servicios de rehabilitación se implementan medidas específicas para la atención de los usuarios de larga permanencia.",
+        "La institución establece acuerdos formales con las aseguradoras para la atención de los usuarios de larga permanencia.",
+    ]
+    for i, texto in enumerate(preguntas_d2_18):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD2_18_{i+1}")
+            guardar_respuesta(f"pD2_18_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D2.18:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D2_18")
+            guardar_respuesta("D2_18", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD2_18")
+            guardar_respuesta("obsD2_18", obs)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+#################### Paso 28 - D2.19
+elif st.session_state.paso == 36:
+
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D3. RESULTADOS DEL PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D3.1 Se utilizan instrumentos adaptados y validados en el contexto nacional para evaluar los resultados del proceso de rehabilitación.
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d31 = ["""Verificar;
+    
+                    Historia clínica; documentación técnica.
+        """]
+    if notas_d31[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d31[0])
+    preguntas_d3_1 = [
+        "Los instrumentos de evaluación de los usuarios de rehabilitación se encuentran validados. [priorizar instrumentos de evaluación funcional o de condiciones más frecuentes]",
+        "Los requisitos o condiciones de aplicación de los instrumentos [Ej., tiempo, equipos] son viables para su uso en los servicios de rehabilitación.",
+        "El uso de instrumentos de evaluación cumple con las normas de licenciamiento o derechos de autor.",
+        "Los profesionales de rehabilitación reciben capacitación o entrenamiento en el uso de instrumentos de evaluación.",
+    ]
+    for i, texto in enumerate(preguntas_d3_1):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD3_1_{i+1}")
+            guardar_respuesta(f"pD3_1_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D3.1:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D3_1")
+            guardar_respuesta("D3_1", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD3_1")
+            guardar_respuesta("obsD3_1", obs)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+elif st.session_state.paso == 37:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D3. RESULTADOS DEL PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D3.2 Se miden y analizan los resultados del estado funcional de los usuarios posterior al proceso de rehabilitación.
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d32 = ["""Verificar:
+                 
+                 Historia clínica; documentación técnica; indicadores.
+        """]
+    if notas_d32[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d32[0])
+    preguntas_d3_2 = [
+        "El estado funcional de los usuarios se evalúa al inicio y al final del proceso de rehabilitación.",
+        "En la evaluación inicial y final del estado funcional de los usuarios se usa un método o instrumento validado.",
+        "Los resultados de la evaluación inicial y final del estado funcional de los usuarios se consolidan y se analizan por la institución.",
+        "La institución define indicadores de resultado relacionados con el estado funcional de los usuarios de rehabilitación.",
+    ]
+    for i, texto in enumerate(preguntas_d3_2):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD3_2_{i+1}")
+            guardar_respuesta(f"pD3_2_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D3.2:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D3_2")
+            guardar_respuesta("D3_2", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD3_2")
+            guardar_respuesta("obsD3_2", obs)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.button("◀️ Anterior", on_click=anterior)
+    with col2:
+        st.button("Siguiente ▶️", on_click=siguiente)
+
+elif st.session_state.paso == 38:
+    st.markdown("""
+                <div style="
+                background-color: #F1F3F5;
+                padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0rem;
+    ">
+        D3. RESULTADOS DEL PROCESO DE REHABILITACIÓN
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+        <div style="
+        background-color:
+        #0b3c70;
+        color: white;
+        padding: 1px 3px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        ">
+        D3.3 Se mide la satisfacción de los usuarios con la atención recibida en los servicios de rehabilitación.
+        </div>
+        """, unsafe_allow_html=True)
+    notas_d33 = ["""Verificar:
+    
+                 documentación técnica; formato; informe o indicadores de satisfacción. 
+        """]
+    if notas_d33[0]:
+        with st.expander("Nota"):
+            st.markdown(notas_d33[0])
+    preguntas_d3_3 = [
+        "Al finalizar el proceso de rehabilitación se mide la satisfacción de los usuarios.",
+        "La medición de la satisfacción de los usuarios es estandarizada y los resultados se expresan en datos numéricos y/o categorías.",
+        "La evaluación de la satisfacción verifica la percepción de los usuarios sobre la oportunidad, seguridad, pertinencia y resultados de la atención.",
+        "Los resultados de la satisfacción de los usuarios se consolidan, analizan y los resultados dan lugar a acciones de mejora.",
+    ]
+    for i, texto in enumerate(preguntas_d3_3):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(texto)
+            st.markdown("-----------------------")
+        with col2:
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key=f"pD3_3_{i+1}")
+            guardar_respuesta(f"pD3_3_{i+1}", val)
+    with st.container():
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.markdown("**Calificación D3.3:**")
+            val = st.selectbox("", opciones, format_func=lambda x: x[0], key="D3_3")
+            guardar_respuesta("D3_3", val)
+        with col2:
+            obs = st.text_area("Observaciones", key="obsD3_3")
+            guardar_respuesta("obsD3_3", obs)
+    col1, col2 = st.columns([5, 1])
     with col1:
         st.button("◀️ Anterior", on_click=anterior)
     with col2:
         st.button("Siguiente ▶️", on_click=siguiente)
 
 
-
-
-
 #### Final #####################
-elif st.session_state.paso == 30:
+elif st.session_state.paso == 39:
 
-    col1, col2= st.columns([5, 1])
+    col1, col2 = st.columns([5, 1])
     with col1:
         st.button("◀️ Anterior", on_click=anterior)
     with col2:
         st.button("Siguiente ▶️", on_click=siguiente)
 
     st.success("¡Formulario completado! ✅")
-    
+
     # --- Mostrar respuestas en formato JSON ---
     st.subheader("Resumen de respuestas:")
-    st.json(st.session_state.respuestas)  # Muestra todas las respuestas almacenadas
-    
-    # --- Opción 1: Botón para reiniciar el formulario ---
+    st.json(st.session_state.respuestas)
+
+    # --- Opción: Volver al inicio ---
     if st.button("🏠 Volver al inicio", type="primary"):
-        # Limpiar el session_state (opcional, si quieres resetear todo)
         st.session_state.paso = 1
-        #st.session_state.respuestas = {}  # Elimina esto si quieres conservar los datos
-        st.rerun()  # Recarga la app para reiniciar
-    
-    # --- Opción 2: Botón para descargar respuestas (opcional) ---
+        # st.session_state.respuestas = {}  # Solo si quieres reiniciar todo
+        st.rerun()
+
+    # --- Exportar respuestas con separador personalizado ---
     import pandas as pd
-    from io import BytesIO
-    
+
+    # Selector de separador
+    separador = st.radio(
+        "Separador del archivo CSV:",
+        options=[",", ";"],
+        format_func=lambda x: "Coma (,)" if x == "," else "Punto y coma (;)",
+        horizontal=True
+    )
+
+    # Convertir respuestas en DataFrame y exportar
     df_respuestas = pd.DataFrame([st.session_state.respuestas])
-    csv = df_respuestas.to_csv(index=False).encode("utf-8")
-    
+    csv = df_respuestas.to_csv(index=False, sep=separador).encode("utf-8")
+
     st.download_button(
         label="📥 Descargar respuestas (CSV)",
         data=csv,
